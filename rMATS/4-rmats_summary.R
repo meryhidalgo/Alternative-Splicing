@@ -5,7 +5,7 @@ library(patchwork)
 
 
 # ---- set input values -----
-conditions <- c("shTDP", "shRNA")
+conditions <- c("contrast", "control")
 num_conditions <- c(3, 3)
 fdr_value <- 0.05
 dpsi_value <- 0.1
@@ -26,9 +26,9 @@ MY_THEME <-
     panel.grid.minor = element_blank(),
     panel.grid.major.x = element_blank(),
     panel.grid.major.y = element_line(linetype = "dashed"),
-    panel.background = element_rect(fill = "#fbf9f4", color = "#fbf9f4"),
-    plot.background = element_rect(fill = "#fbf9f4", color = "#fbf9f4"),
-    legend.background = element_rect(fill = "#fbf9f4"),
+    panel.background = element_rect(fill = "white", color = "white"),
+    plot.background = element_rect(fill = "white", color = "white"),
+    legend.background = element_rect(fill = "white"),
     plot.title = element_text(
       #family = "Roboto",
       size = 16,
@@ -114,6 +114,7 @@ volcanos <-
   })
 
 y.max <- max(sapply(volcanos, function(p) max(p$data$log10pval)))
+y.max <- 15
 y.min <- max(sapply(volcanos, function(p) min(p$data$log10pval)))
 
 legend.levels <- levels(lapply(volcanos, function(p) p$data$Status)[[1]])
@@ -168,9 +169,9 @@ combined_colors <- c(
 
 # Create the volcano plot with customized colors
 v.n <- ggplot(combined_data, aes(x = deltaPSI, y = log10pval, color = color_group)) +
-  geom_point(alpha = 0.7) +
+  geom_point(alpha = 0.7, size = 4) +
   scale_color_manual(values = combined_colors) +
-  ggtitle(str_glue("Females KO OldvsYoung")) +
+  ggtitle(str_glue("{conditions[1]} vs {conditions[2]}")) +
   ylim(c(min(combined_data$log10pval), max(combined_data$log10pval))) +
   labs(color = "Event Status") +
   ylim(c(y.min, y.max)) +
@@ -229,6 +230,7 @@ combined_pca_plots <- wrap_plots(pca_plots) +
   plot_annotation(title = str_glue("PCA: {conditions[1]} vs {conditions[2]}")) &
   MY_THEME
 
+combined_pca_plots
 
 ggsave(
   filename = str_glue("plots/PCA_{conditions[1]}_vs_{conditions[2]}_fdr{fdr_value}_dpsi{dpsi_value}.png"),
@@ -301,3 +303,14 @@ for (ii in seq_along(tables)) {
   }
 }
 
+diff.summary <- bind_rows(lapply(names(event.tables), function(event.name) {
+  event.tables[[event.name]] %>%
+    summarise(
+      event = event.name,
+      n_diff = n(),
+      n_positive_dPSI = sum(IncLevelDifference > 0),
+      n_negative_dPSI = sum(IncLevelDifference < 0)
+    )
+}))
+
+print(diff.summary)
